@@ -16,12 +16,36 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.image.ImageView;
-import javafx.scene.image.Image;
+import java.nio.charset.StandardCharsets;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import java.io.IOException;
 
 /**
- * REPLACE WITH NON-SHOUTING DESCRIPTION OF YOUR APP.
+ * This app takes in a city, and gets the current weather of that city.
+ * It then takes in the weather of that city and inputs it into the pinterest API
+ * and outputs an image of an outfit based on the weather.
  */
 public class ApiApp extends Application {
     Stage stage;
@@ -39,10 +63,15 @@ public class ApiApp extends Application {
     Button findOutfit;
     Button next;
     ImageView imgView;
-    /** A default image which loads when the application starts. */
-    private static final String DEFAULT_IMG = "resources/default.png";
 
-    /** Default height and width for Images. */
+    /** A default image which loads when the application starts. */
+   private static final String DEFAULT_IMG = "resources/default.png";
+//    private static final String WEATHER_API_URL = "https://api.weather.gov/";
+//    private static final String WEATHER_API_ENDPOINT = "points/";
+    private static final String WEATHER_KEY = "3VUANMh12DeqhHRY1ZlZMdKXNuCFLc2Tya2qgQVb";
+    private static final String WEATHER_API = "https://api.api-ninjas.com/v1/weather?city=";
+
+        /** Default height and width for Images. */
     private static final int DEF_HEIGHT = 500;
     private static final int DEF_WIDTH = 500;
     private static int FIT_HEIGHT = 300;
@@ -71,6 +100,11 @@ public class ApiApp extends Application {
     @Override
     public void start(Stage stage) {
 
+        EventHandler<ActionEvent> getImageAction = event -> {
+            next.setDisable(true);
+            runOnNewThread(() -> System.out.println(getWeather("Atlanta")));
+        };
+
         this.stage = stage;
         top.getChildren().addAll(cityLabel, cityText, stateLabel, stateText, findOutfit);
 //        stateHBox.getChildren().addAll(stateLabel, stateText);
@@ -86,7 +120,7 @@ public class ApiApp extends Application {
         Image defaultImage = new Image("file:" + DEFAULT_IMG);
         // add the image to the imageview
         imgView.setImage(defaultImage);
-
+        findOutfit.setOnAction(getImageAction);
         /*
         // demonstrate how to load local asset using "file:resources/"
         Image bannerImage = new Image("file:resources/readme-banner.png");
@@ -116,13 +150,112 @@ public class ApiApp extends Application {
 
     } // start
 
+    /**
+     * Based on the user's inputs, returns a weather condition for that location.
+     * @param city the user inputs
+     * @return a weather condition for the location
+     */
+    private String getWeather(String city) {
+        try {
+            String url = WEATHER_API + URLEncoder.encode(city, StandardCharsets.UTF_8.toString());
+            URL obj = new URL(url);
+            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+            con.setRequestMethod("GET");
+            con.setRequestProperty("X-Api-Key", WEATHER_KEY);
+
+            int responseCode = con.getResponseCode();
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            StringBuilder response = new StringBuilder();
+
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+            String weather = response.toString();
+            System.out.println(weather);
+            if (weather.contains("rain") || weather.contains("thunderstorm")) {
+                System.out.println("rainy");
+                return "rainy";
+            } else {
+                int tempIndex = weather.indexOf("\"temp\":");
+                if (tempIndex >= 0) {
+                    int endIndex = weather.indexOf(",", tempIndex);
+                    if (endIndex < 0) {
+                        endIndex = weather.indexOf("}", tempIndex);
+                    }
+                    String tempString = weather.substring(tempIndex + 7, endIndex);
+                    double temp = Double.parseDouble(tempString);
+                    if (temp > 25.0) {
+                        return "hot";
+                    } else if (temp > 10.0) {
+                        return "moderate";
+                    } else {
+                        return "cold";
+                    }
+                } else {
+                    System.out.println("Temperature not found in response.");
+                    return "";
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            Platform.runLater(() -> alertError(e));
+            Platform.runLater(() -> instructions.setText("Last attempt to get images failed..."));
+            findOutfit.setDisable(false);
+            return "";
+        } //catch
+
+    } //getWeather
+
     /*
-    private String getWeather(String city, String state) {
+    private String callAPI(String url) {
+        URL apiUrl = new URL(url);
+        HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Accept", "application/json");
 
-    } //getWeather */
+        if (conn.getResponseCode() != 200) {
+            throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
+        }
 
+        BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
+        StringBuilder sb = new StringBuilder();
+        String output;
+        while ((output = br.readLine()) != null) {
+            sb.append(output);
+        }
+        conn.disconnect();
+        return sb.toString();
+    }
     /*
     private String getImage(String weather) {
 
     } //getImage */
+
+     /**
+      * Show a modal error alert based on {@code cause}.
+      * @param cause a {@link java.lang.Throwable Throwable} that caused the alert
+      */
+    public static void alertError(Throwable cause) {
+        TextArea text = new TextArea(cause.toString());
+        text.setEditable(false);
+        Alert alert = new Alert(AlertType.ERROR);
+        alert.getDialogPane().setContent(text);
+        alert.setResizable(true);
+        alert.showAndWait();
+    } // alertError
+
+    /**
+     * Creates and immediately starts a new dameon thread that executes.
+     * @param target the object
+     */
+    public static void runOnNewThread(Runnable target) {
+        Thread t = new Thread(target);
+        t.setDaemon(true);
+        t.start();
+    } //runOnNewThread
+
 } // ApiApp
