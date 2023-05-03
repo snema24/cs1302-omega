@@ -102,7 +102,8 @@ public class ApiApp extends Application {
 
         EventHandler<ActionEvent> getImageAction = event -> {
             next.setDisable(true);
-            runOnNewThread(() -> System.out.println(getWeather("Atlanta")));
+            String city = cityText.getText();
+            runOnNewThread(() -> getWeather(city));
         };
 
         this.stage = stage;
@@ -177,7 +178,7 @@ public class ApiApp extends Application {
             String weather = response.toString();
             System.out.println(weather);
             if (weather.contains("rain") || weather.contains("thunderstorm")) {
-                System.out.println("rainy");
+                instructions.setText("It is rainy in" + city + ". here is an outfit idea!");
                 return "rainy";
             } else {
                 int tempIndex = weather.indexOf("\"temp\":");
@@ -189,10 +190,16 @@ public class ApiApp extends Application {
                     String tempString = weather.substring(tempIndex + 7, endIndex);
                     double temp = Double.parseDouble(tempString);
                     if (temp > 25.0) {
+                        String text = "It's hot in " + city + ". Here's an outfit idea!";
+                        Platform.runLater(() -> instructions.setText(text));
                         return "hot";
                     } else if (temp > 10.0) {
+                        String text = "It's moderate in " + city + ". Here's an outfit idea!";
+                        Platform.runLater(() -> instructions.setText(text));
                         return "moderate";
                     } else {
+                        String text = "It's cold in " + city + ". Here's an outfit idea!";
+                    Platform.runLater(() -> instructions.setText(text));
                         return "cold";
                     }
                 } else {
