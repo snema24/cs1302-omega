@@ -1,3 +1,4 @@
+
 package cs1302.api;
 
 import javafx.application.Application;
@@ -25,6 +26,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.net.URI;
+import java.net.http.HttpClient;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,6 +46,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import java.io.IOException;
+import cs1302.api.PhotoResult;
+import cs1302.api.PhotoResponse;
 
 /**
  * This app takes in a city, and gets the current weather of that city.
@@ -64,14 +71,29 @@ public class ApiApp extends Application {
     Button next;
     ImageView imgView;
 
+    private static HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_2)           // uses HTTP protocol version 2 where possible
+        .followRedirects(HttpClient.Redirect.NORMAL)  // always redirects, except from HTTPS to HTTP
+        .build();                                     // builds and returns an HttpClient
+
+    private static Gson GSON = new GsonBuilder()
+        .setPrettyPrinting()
+        .create();
+
     /** A default image which loads when the application starts. */
-   private static final String DEFAULT_IMG = "resources/default.png";
-//    private static final String WEATHER_API_URL = "https://api.weather.gov/";
-//    private static final String WEATHER_API_ENDPOINT = "points/";
+    private static final String DEFAULT_IMG = "resources/default.png";
+
+
     private static final String WEATHER_KEY = "3VUANMh12DeqhHRY1ZlZMdKXNuCFLc2Tya2qgQVb";
     private static final String WEATHER_API = "https://api.api-ninjas.com/v1/weather?city=";
 
-        /** Default height and width for Images. */
+    private static final String PHOTO_API = "https://api.unsplash.com/photos/random";
+    private static final String PHOTO_KEY = "xntOH7mSke1Zlr8sb8c2Hj55kGGNPCr4YTTuJmUInyY";
+    private static final String CLIENT_ID = "";
+    private static final String CLIENT_SECRET = "";
+
+
+    /** Default height and width for Images. */
     private static final int DEF_HEIGHT = 500;
     private static final int DEF_WIDTH = 500;
     private static int FIT_HEIGHT = 300;
@@ -103,11 +125,11 @@ public class ApiApp extends Application {
         EventHandler<ActionEvent> getImageAction = event -> {
             next.setDisable(true);
             String city = cityText.getText();
-            runOnNewThread(() -> getWeather(city));
+            runOnNewThread(() -> getPhoto(getWeather(city)));
         };
 
         this.stage = stage;
-        top.getChildren().addAll(cityLabel, cityText, stateLabel, stateText, findOutfit);
+        top.getChildren().addAll(cityLabel, cityText, findOutfit);
 //        stateHBox.getChildren().addAll(stateLabel, stateText);
 
         top.setAlignment(Pos.CENTER);
@@ -124,7 +146,7 @@ public class ApiApp extends Application {
         findOutfit.setOnAction(getImageAction);
         /*
         // demonstrate how to load local asset using "file:resources/"
-        Image bannerImage = new Image("file:resources/readme-banner.png");
+v        Image bannerImage = new Image("file:resources/readme-banner.png");
         ImageView banner = new ImageView(bannerImage);
         banner.setPreserveRatio(true);
         banner.setFitWidth(640);
@@ -134,7 +156,7 @@ public class ApiApp extends Application {
 
         // setup scene
         root.getChildren().addAll(banner, notice); */
-        root.getChildren().addAll(instructions,top,imgView,next);
+        root.getChildren().addAll(instructions,top,imgView);
         root.setAlignment(Pos.CENTER);
         root.setPadding(new Insets(20));
 
@@ -165,7 +187,6 @@ public class ApiApp extends Application {
             con.setRequestProperty("X-Api-Key", WEATHER_KEY);
 
             int responseCode = con.getResponseCode();
-
             BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
             String inputLine;
             StringBuilder response = new StringBuilder();
@@ -199,50 +220,101 @@ public class ApiApp extends Application {
                         return "moderate";
                     } else {
                         String text = "It's cold in " + city + ". Here's an outfit idea!";
-                    Platform.runLater(() -> instructions.setText(text));
+                        Platform.runLater(() -> instructions.setText(text));
                         return "cold";
-                    }
+                    } //else
                 } else {
                     System.out.println("Temperature not found in response.");
                     return "";
-                }
+                } //else
             }
         } catch (IOException e) {
             e.printStackTrace();
             Platform.runLater(() -> alertError(e));
             Platform.runLater(() -> instructions.setText("Last attempt to get images failed..."));
             findOutfit.setDisable(false);
+            imgView.setImage(null);
             return "";
         } //catch
 
     } //getWeather
 
-    /*
-    private String callAPI(String url) {
-        URL apiUrl = new URL(url);
-        HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Accept", "application/json");
+    /**
+     * Gets a link to an outfit from the unsplash API based on the weather condition.
+     * @param condition from getWeather.
+//     * @return PhotoResult with link.
+     */
+    public void getPhoto(String condition) {
+        try {
+            String term;
+            if (condition.equals("hot")) {
+                term = "shorts";
+            } else if (condition.equals("cold")) {
+                term = "coat";
+            } else {
+                term = "longsleeve";
+            }
+//            String term = "sweater";
+            String word = URLEncoder.encode(term, StandardCharsets.UTF_8);
+            String query = String.format("?query=%s&client_id=%s", word, PHOTO_KEY);
+            String uri = PHOTO_API + query;
 
-        if (conn.getResponseCode() != 200) {
-            throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
-        }
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(uri))
+                .build();
+            // send request / receive response in the form of a String
+            HttpResponse<String> response = HTTP_CLIENT
+                .send(request, BodyHandlers.ofString());
+            // ensure the request is okay
+            if (response.statusCode() != 200) {
+                throw new IOException(response.toString());
+            } // if
+            String jsonString = response.body();
+//            System.out.println(jsonString.trim());
 
-        BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-        StringBuilder sb = new StringBuilder();
-        String output;
-        while ((output = br.readLine()) != null) {
-            sb.append(output);
-        }
-        conn.disconnect();
-        return sb.toString();
+            PhotoResponse photoResponse = GSON
+                .fromJson(jsonString, PhotoResponse.class);
+            System.out.println(GSON.toJson(photoResponse));
+
+            PhotoResult result = GSON.fromJson(jsonString, PhotoResult.class);
+            String link = result.getUrl().getRaw();
+//            String link = "https://images.unsplash.com/photo-1417325384643-aac51acc9e5d?q=75&fm=jpg&w=1080&fit=max";
+            Image image = getImage(link);
+            imgView.setImage(image);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            Platform.runLater(() -> alertError(e));
+            Platform.runLater(() -> instructions.setText("Last attempt to get images failed..."));
+            findOutfit.setDisable(false);
+            Image nullImg = getImage("");
+            imgView.setImage(nullImg);
+//            return null;
+        } //catch
+
     }
-    /*
-    private String getImage(String weather) {
 
-    } //getImage */
+    /**
+     * This method converts the url into an image.
+     * @param url is an url to an image
+     * @return Image to add to the imageview,
+     */
+    private Image getImage(String url) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("GET");
+            Image img = new Image(connection.getInputStream());
+            return img;
 
-     /**
+        } catch (IOException e) {
+            e.printStackTrace();
+            Platform.runLater(() -> alertError(e));
+            Platform.runLater(() -> instructions.setText("Last attempt to get images failed..."));
+            findOutfit.setDisable(false);
+            return null;
+        } //catch
+    } //getImage
+
+    /**
       * Show a modal error alert based on {@code cause}.
       * @param cause a {@link java.lang.Throwable Throwable} that caused the alert
       */
