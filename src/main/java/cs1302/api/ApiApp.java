@@ -130,6 +130,7 @@ public class ApiApp extends Application {
             next.setDisable(true);
             String city = cityText.getText();
             runOnNewThread(() -> getPhoto(getWeather(city)));
+//            System.out.println(getWeather(city));
         };
 
         this.stage = stage;
@@ -201,56 +202,51 @@ v        Image bannerImage = new Image("file:resources/readme-banner.png");
             in.close();
 
             String weather = response.toString();
-            System.out.println(weather);
-            if (weather.contains("rain") || weather.contains("thunderstorm")) {
-                instructions.setText("It is rainy in" + city + ". here is an outfit idea!");
-                return "rainy";
-            } else {
-                int tempIndex = weather.indexOf("\"temp\":");
-                if (tempIndex >= 0) {
-                    int endIndex = weather.indexOf(",", tempIndex);
-                    if (endIndex < 0) {
-                        endIndex = weather.indexOf("}", tempIndex);
-                    }
-                    String tempString = weather.substring(tempIndex + 7, endIndex);
-                    double temp = Double.parseDouble(tempString);
-                    if (temp > 25.0) {
-                        String text =
-                            "It's hot outside in " + city + ". Here's an outfit idea!";
-                        Platform.runLater(() -> instructions.setText(text));
+//            System.out.println(weather);
 
-                        return "hot";
-                    } else if (temp > 10.0) {
-                        String text =
-                            "It's moderate outside in " + city + ". Here's an outfit idea!";
-                        Platform.runLater(() -> instructions.setText(text));
-                        return "moderate";
-                    } else {
-                        String text =
-                            "It's cold outside in " + city + ". Here's an outfit idea!";
-                        Platform.runLater(() -> instructions.setText(text));
-                        return "cold";
-                    } //else
+            // Find the temperature from the weather response
+            int tempIndex = weather.indexOf("\"temp\":");
+            if (tempIndex >= 0) {
+                int endIndex = weather.indexOf(",", tempIndex);
+                if (endIndex < 0) {
+                    endIndex = weather.indexOf("}", tempIndex);
+                }
+                String tempString = weather.substring(tempIndex + 7, endIndex);
+                double temp = Double.parseDouble(tempString);
+                // Check the temperature and return condition
+                if (temp > 25.0) {
+                    String text = "It's hot outside in " + city + ". Here's an outfit idea!";
+                    Platform.runLater(() -> instructions.setText(text));
+                    return "hot";
+                } else if (temp > 10.0) {
+                    String text =
+                        "It's moderate outside in " + city + ". Here's an outfit idea!";
+                    Platform.runLater(() -> instructions.setText(text));
+                    return "moderate";
                 } else {
-                    System.out.println("Temperature not found in response.");
-                    return "";
-                } //else
-            }
+                    String text = "It's cold outside in " + city + ". Here's an outfit idea!";
+                    Platform.runLater(() -> instructions.setText(text));
+                    return "cold";
+                }
+            } else {
+                System.out.println("Temperature not found in response.");
+                return "";
+            } //else
         } catch (IOException e) {
             e.printStackTrace();
             Platform.runLater(() -> alertError(e));
             Platform.runLater(() -> instructions.setText("Last attempt to get images failed..."));
             findOutfit.setDisable(false);
+            getPhoto("");
             imgView.setImage(null);
             return "";
-        } //catch
-
-    } //getWeather
+        }
+    }
 
     /**
      * Gets a link to an outfit from the unsplash API based on the weather condition.
      * @param condition from getWeather.
-//     * @return PhotoResult with link.
+
      */
     public void getPhoto(String condition) {
         try {
@@ -258,7 +254,7 @@ v        Image bannerImage = new Image("file:resources/readme-banner.png");
             if (condition.equals("hot")) {
                 term = "shorts";
 
-//                details.setText("Since it's so hot outside, I suggest wearing shorts!");
+
             } else if (condition.equals("cold")) {
                 term = "coat";
             } else {
@@ -284,11 +280,11 @@ v        Image bannerImage = new Image("file:resources/readme-banner.png");
 
             PhotoResponse photoResponse = GSON
                 .fromJson(jsonString, PhotoResponse.class);
-            System.out.println(GSON.toJson(photoResponse));
+//            System.out.println(GSON.toJson(photoResponse));
 
             PhotoResult result = GSON.fromJson(jsonString, PhotoResult.class);
             String link = result.getUrl().getRaw();
-//            String link = "https://images.unsplash.com/photo-1417325384643-aac51acc9e5d?q=75&fm=jpg&w=1080&fit=max";
+
             Image image = getImage(link);
             imgView.setImage(image);
         } catch (IOException | InterruptedException e) {

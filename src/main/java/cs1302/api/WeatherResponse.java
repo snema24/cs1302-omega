@@ -1,13 +1,24 @@
 package cs1302.api;
 
+/**
+ * Gets all of the weather responses.
+ */
 public class WeatherResponse {
-    private WeatherMain main;
+    private WeatherResponse[] weather;
 
-    public WeatherMain getMain() {
-        return main;
+    /**`
+     * Gets an array of all the results.
+     * @return WeaterResponse[]
+     */
+    public WeatherResponse[] getWeather() {
+        return weather;
     }
 
-    public void setMain(WeatherMain main) {
-        this.main = main;
+    /**
+     * Sets weather instance variable.
+     * @param weather
+     */
+    public void setWeather(WeatherResponse[] weather) {
+        this.weather = weather;
     }
 }
