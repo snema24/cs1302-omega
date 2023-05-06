@@ -70,6 +70,8 @@ public class ApiApp extends Application {
     Button findOutfit;
     Button next;
     ImageView imgView;
+    Label details;
+    Label credit;
 
     private static HttpClient HTTP_CLIENT = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)           // uses HTTP protocol version 2 where possible
@@ -106,7 +108,7 @@ public class ApiApp extends Application {
     public ApiApp() {
         root = new VBox();
 
-        instructions = new Label("Enter a city in the US to get an outfit based on the weather.");
+        instructions = new Label("Enter a city to get an outfit based on the current temperature.");
         this.cityLabel = new Label("City: ");
         this.cityText = new TextField("Atlanta");
         this.top = new HBox(10);
@@ -116,6 +118,8 @@ public class ApiApp extends Application {
         this.findOutfit = new Button("Find Outfit");
         this.next = new Button("Next");
         this.imgView = new ImageView();
+        this.details = new Label("test");
+        this.credit = new Label("Images provided by Unsplash API.");
     } // ApiApp
 
     /** {@inheritDoc} */
@@ -156,7 +160,7 @@ v        Image bannerImage = new Image("file:resources/readme-banner.png");
 
         // setup scene
         root.getChildren().addAll(banner, notice); */
-        root.getChildren().addAll(instructions,top,imgView);
+        root.getChildren().addAll(instructions, top, imgView, credit);
         root.setAlignment(Pos.CENTER);
         root.setPadding(new Insets(20));
 
@@ -211,15 +215,19 @@ v        Image bannerImage = new Image("file:resources/readme-banner.png");
                     String tempString = weather.substring(tempIndex + 7, endIndex);
                     double temp = Double.parseDouble(tempString);
                     if (temp > 25.0) {
-                        String text = "It's hot in " + city + ". Here's an outfit idea!";
+                        String text =
+                            "It's hot outside in " + city + ". Here's an outfit idea!";
                         Platform.runLater(() -> instructions.setText(text));
+
                         return "hot";
                     } else if (temp > 10.0) {
-                        String text = "It's moderate in " + city + ". Here's an outfit idea!";
+                        String text =
+                            "It's moderate outside in " + city + ". Here's an outfit idea!";
                         Platform.runLater(() -> instructions.setText(text));
                         return "moderate";
                     } else {
-                        String text = "It's cold in " + city + ". Here's an outfit idea!";
+                        String text =
+                            "It's cold outside in " + city + ". Here's an outfit idea!";
                         Platform.runLater(() -> instructions.setText(text));
                         return "cold";
                     } //else
@@ -249,6 +257,8 @@ v        Image bannerImage = new Image("file:resources/readme-banner.png");
             String term;
             if (condition.equals("hot")) {
                 term = "shorts";
+
+//                details.setText("Since it's so hot outside, I suggest wearing shorts!");
             } else if (condition.equals("cold")) {
                 term = "coat";
             } else {
